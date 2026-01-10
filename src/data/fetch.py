@@ -107,7 +107,7 @@ class DataFetcher:
         # Fetch from RSS feeds
         if include_rss:
             try:
-                rss_articles = self.rss.fetch()
+                rss_articles = self.rss.fetch(days_back=days_back)
                 # Validate that we got dictionaries
                 valid_rss = [a for a in rss_articles if isinstance(a, dict)]
                 if len(valid_rss) != len(rss_articles):

@@ -1,7 +1,7 @@
 """RSS feed data source for ML blogs and news."""
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
 
@@ -94,6 +94,7 @@ class RSSFeedSource:
         self,
         feed_names: Optional[List[str]] = None,
         max_per_feed: int = 20,
+        days_back: int = 7,
     ) -> List[Dict[str, Any]]:
         """
         Fetch articles from RSS feeds.
@@ -101,6 +102,7 @@ class RSSFeedSource:
         Args:
             feed_names: List of feed names to fetch (None = all feeds)
             max_per_feed: Maximum articles per feed
+            days_back: Only fetch articles published within this many days
             
         Returns:
             List of article dictionaries
@@ -111,6 +113,7 @@ class RSSFeedSource:
             feeds_to_fetch = {k: v for k, v in self.feeds.items() if k in feed_names}
         
         articles = []
+        cutoff_date = datetime.utcnow() - timedelta(days=days_back)
         
         for feed_name, feed_url in feeds_to_fetch.items():
             try:
@@ -122,10 +125,27 @@ class RSSFeedSource:
                     logger.warning(f"Failed to parse feed {feed_name}: {feed.bozo_exception}")
                     continue
                 
-                for entry in feed.entries[:max_per_feed]:
+                feed_articles = 0
+                for entry in feed.entries:
+                    if feed_articles >= max_per_feed:
+                        break
+                    
                     title = entry.get("title", "").strip()
                     if not title:
                         continue
+                    
+                    # Parse and check publication date
+                    published_date = self._parse_date(entry)
+                    
+                    # Skip articles older than cutoff date
+                    if published_date and published_date < cutoff_date:
+                        logger.debug(f"Skipping old article from {feed_name}: {title} (published {published_date})")
+                        continue
+                    
+                    # If no date found, use current time (assume recent)
+                    if not published_date:
+                        logger.debug(f"No date found for article from {feed_name}, assuming recent: {title}")
+                        published_date = datetime.utcnow()
                     
                     content = self._extract_content(entry)
                     abstract = content[:500] if content else None
@@ -137,7 +157,7 @@ class RSSFeedSource:
                         "abstract": abstract,
                         "full_text": content,
                         "url": entry.get("link", ""),
-                        "published_date": self._parse_date(entry),
+                        "published_date": published_date,
                         "metadata": {
                             "feed_name": feed_name,
                             "feed_url": feed_url,
@@ -147,8 +167,9 @@ class RSSFeedSource:
                         }
                     }
                     articles.append(article)
+                    feed_articles += 1
                 
-                logger.info(f"Fetched {len([a for a in articles if feed_name in a['source']])} articles from {feed_name}")
+                logger.info(f"Fetched {feed_articles} recent articles from {feed_name}")
                 
             except Exception as e:
                 logger.error(f"Error fetching feed {feed_name}: {e}")
