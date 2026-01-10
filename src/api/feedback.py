@@ -14,6 +14,65 @@ from ..utils.db import get_db
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
 
+@router.get("/classification", response_model=FeedbackResponse)
+async def submit_classification_feedback_get(
+    article_id: str = Query(..., description="Article ID"),
+    label: str = Query(..., description="Correct label (garbage, important, worth_learning)"),
+    user_id: Optional[str] = Query(None, description="Optional user ID"),
+    comment: Optional[str] = Query(None, description="Optional comment"),
+):
+    """
+    Submit feedback for a classification prediction via GET request.
+    
+    This is a simplified endpoint for email links where POST is inconvenient.
+    """
+    db = get_db()
+    
+    try:
+        # Validate label
+        valid_labels = ["garbage", "important", "worth_learning"]
+        if label not in valid_labels:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid label. Must be one of: {', '.join(valid_labels)}"
+            )
+        
+        # Get the prediction for this article
+        prediction = db.get_prediction_by_article_id(article_id)
+        
+        if not prediction:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No prediction found for article {article_id}"
+            )
+        
+        # Store the feedback
+        db.add_feedback(
+            feedback_type="classification",
+            article_id=article_id,
+            original_value=prediction.get("label"),
+            corrected_value=label,
+            user_id=user_id,
+            comment=comment,
+        )
+        
+        logger.info(
+            f"Classification feedback received for article {article_id}: "
+            f"{prediction.get('label')} -> {label}"
+        )
+        
+        return FeedbackResponse(
+            success=True,
+            message="Thank you for your feedback! This will help improve the model."
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error storing classification feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/classification", response_model=FeedbackResponse)
 async def submit_classification_feedback(feedback: ClassificationFeedback):
     """
@@ -91,6 +150,52 @@ async def submit_summary_feedback(feedback: SummaryFeedback):
             message="Summary feedback recorded successfully"
         )
         
+    except Exception as e:
+        logger.error(f"Error storing summary feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/summary", response_model=FeedbackResponse)
+async def submit_summary_feedback_get(
+    article_id: str = Query(..., description="Article ID"),
+    rating: str = Query(..., description="Summary rating (good or bad)"),
+    user_id: Optional[str] = Query(None, description="Optional user ID"),
+    comment: Optional[str] = Query(None, description="Optional comment"),
+):
+    """
+    Submit feedback for a summary via GET request.
+    
+    This is a simplified endpoint for email links.
+    """
+    db = get_db()
+    
+    try:
+        # Validate rating
+        if rating not in ["good", "bad"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid rating. Must be 'good' or 'bad'"
+            )
+        
+        # Store the feedback
+        db.add_feedback(
+            feedback_type="summary",
+            article_id=article_id,
+            original_value="",
+            corrected_value=rating,
+            user_id=user_id,
+            comment=comment,
+        )
+        
+        logger.info(f"Summary feedback received for article {article_id}: {rating}")
+        
+        return FeedbackResponse(
+            success=True,
+            message=f"Thank you! Your feedback that the summary was {rating} has been recorded."
+        )
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error storing summary feedback: {e}")
         raise HTTPException(status_code=500, detail=str(e))

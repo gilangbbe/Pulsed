@@ -79,17 +79,17 @@ class MetricsCollector:
         Returns:
             Dictionary with summarization metrics
         """
-        # This would query from summaries table
-        # For now, return placeholder structure
+        stats = self.db.get_summary_stats(days=days)
+        
         return {
             "period_days": days,
-            "total_summaries": 0,
-            "avg_rouge_l": 0.0,
-            "avg_latency_ms": 0.0,
-            "by_type": {
+            "total_summaries": stats.get("total_summaries", 0),
+            "avg_rouge_l": stats.get("avg_rouge_l", 0.0),
+            "avg_latency_ms": stats.get("avg_latency_ms", 0.0),
+            "by_type": stats.get("by_type", {
                 "brief": {"count": 0, "avg_length": 0},
                 "detailed": {"count": 0, "avg_length": 0},
-            },
+            }),
         }
     
     def collect_feedback_metrics(self) -> Dict[str, Any]:

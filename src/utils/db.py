@@ -208,6 +208,25 @@ class DatabaseManager:
             )
             return True
     
+    def get_article_by_id(self, article_id: str) -> Optional[Dict[str, Any]]:
+        """Get a single article by ID."""
+        with self.get_session() as session:
+            result = session.execute(
+                text("""
+                    SELECT article_id, source, title, abstract, full_text,
+                           url, published_date, fetched_date, metadata, data_version
+                    FROM raw_articles
+                    WHERE article_id = :article_id
+                """),
+                {"article_id": article_id}
+            ).fetchone()
+            
+            if result:
+                columns = ["id", "source", "title", "abstract", "full_text",
+                          "url", "published_date", "fetched_at", "metadata", "data_version"]
+                return dict(zip(columns, result))
+            return None
+    
     def get_unclassified_articles(self, limit: int = 200) -> List[Dict[str, Any]]:
         """Get articles that haven't been classified yet."""
         with self.get_session() as session:
@@ -274,6 +293,27 @@ class DatabaseManager:
                 }
             )
     
+    def get_prediction_by_article_id(self, article_id: str) -> Optional[Dict[str, Any]]:
+        """Get the prediction for a specific article."""
+        with self.get_session() as session:
+            result = session.execute(
+                text("""
+                    SELECT prediction_id, article_id, classifier_version, 
+                           predicted_label, confidence, prediction_time, latency_ms
+                    FROM predictions
+                    WHERE article_id = :article_id
+                    ORDER BY prediction_time DESC
+                    LIMIT 1
+                """),
+                {"article_id": article_id}
+            ).fetchone()
+            
+            if result:
+                columns = ["prediction_id", "article_id", "classifier_version", 
+                          "label", "confidence", "prediction_time", "latency_ms"]
+                return dict(zip(columns, result))
+            return None
+    
     # Summary operations
     def insert_summary(
         self,
@@ -328,6 +368,62 @@ class DatabaseManager:
                 return dict(zip(columns, result))
             return None
     
+    def get_summary_stats(self, days: int = 7) -> Dict[str, Any]:
+        """Get summary statistics over time period."""
+        with self.get_session() as session:
+            result = session.execute(
+                text("""
+                    SELECT 
+                        COUNT(*) as total,
+                        AVG(CASE WHEN rouge_l IS NOT NULL THEN rouge_l ELSE 0 END) as avg_rouge_l,
+                        AVG(latency_ms) as avg_latency_ms,
+                        summary_type,
+                        COUNT(CASE WHEN summary_type = 'brief' THEN 1 END) as brief_count,
+                        COUNT(CASE WHEN summary_type = 'detailed' THEN 1 END) as detailed_count
+                    FROM summaries
+                    WHERE generation_time >= datetime('now', :days_ago)
+                    GROUP BY summary_type
+                """),
+                {"days_ago": f"-{days} days"}
+            ).fetchall()
+            
+            if not result or not result[0][0]:
+                return {
+                    "total_summaries": 0,
+                    "avg_rouge_l": 0.0,
+                    "avg_latency_ms": 0.0,
+                    "by_type": {
+                        "brief": {"count": 0},
+                        "detailed": {"count": 0},
+                    }
+                }
+            
+            # Aggregate across types
+            total = 0
+            rouge_sum = 0
+            latency_sum = 0
+            by_type = {"brief": {"count": 0}, "detailed": {"count": 0}}
+            
+            for row in result:
+                count = row[0] or 0
+                rouge = row[1] or 0.0
+                latency = row[2] or 0.0
+                summary_type = row[3] or "brief"
+                
+                total += count
+                rouge_sum += rouge * count
+                latency_sum += latency * count
+                
+                if summary_type in by_type:
+                    by_type[summary_type]["count"] = count
+            
+            return {
+                "total_summaries": total,
+                "avg_rouge_l": rouge_sum / total if total > 0 else 0.0,
+                "avg_latency_ms": latency_sum / total if total > 0 else 0.0,
+                "by_type": by_type,
+            }
+    
     # Feedback operations
     def insert_classification_feedback(
         self,
@@ -380,6 +476,42 @@ class DatabaseManager:
                     "summarizer_version": summarizer_version,
                     "feedback_time": datetime.utcnow(),
                 }
+            )
+    
+    def add_feedback(
+        self,
+        feedback_type: str,
+        article_id: str,
+        original_value: Optional[str] = None,
+        corrected_value: Optional[str] = None,
+        user_id: Optional[str] = None,
+        comment: Optional[str] = None,
+    ):
+        """
+        Generic method to add feedback (for API compatibility).
+        Routes to appropriate specific method.
+        """
+        if feedback_type == "classification":
+            # Get the classifier version from the prediction
+            prediction = self.get_prediction_by_article_id(article_id)
+            classifier_version = prediction.get("classifier_version", "unknown") if prediction else "unknown"
+            
+            self.insert_classification_feedback(
+                article_id=article_id,
+                predicted_label=original_value or "unknown",
+                correct_label=corrected_value or "unknown",
+                classifier_version=classifier_version,
+            )
+        elif feedback_type == "summary":
+            # Get the summarizer version from the summary
+            summary = self.get_summary(article_id)
+            summarizer_version = summary.get("summarizer_version", "unknown") if summary else "unknown"
+            
+            self.insert_summary_feedback(
+                article_id=article_id,
+                rating=corrected_value or "unknown",
+                summarizer_version=summarizer_version,
+                issues=comment,
             )
     
     def get_unused_classification_feedback(self) -> List[Dict[str, Any]]:
