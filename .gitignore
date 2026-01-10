@@ -85,7 +85,7 @@ mlartifacts/
 *.dvc.lock
 
 # Model artifacts
-models/
+/models/
 *.pt
 *.pth
 *.bin
