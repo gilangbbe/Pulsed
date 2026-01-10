@@ -84,6 +84,7 @@ class DailyPipeline:
             "start_time": start_time.isoformat(),
             "fetch": None,
             "inference": None,
+            "digest": None,
             "errors": [],
         }
         
@@ -100,6 +101,16 @@ class DailyPipeline:
         except Exception as e:
             logger.error(f"Inference failed: {e}")
             results["errors"].append(f"Inference: {str(e)}")
+        
+        # Step 3: Send daily digest
+        try:
+            from .digest import DigestGenerator
+            generator = DigestGenerator()
+            results["digest"] = generator.send_digest(hours_back=24)
+            logger.info(f"Digest sent: {results['digest']}")
+        except Exception as e:
+            logger.error(f"Digest failed: {e}")
+            results["errors"].append(f"Digest: {str(e)}")
         
         end_time = datetime.utcnow()
         results["end_time"] = end_time.isoformat()

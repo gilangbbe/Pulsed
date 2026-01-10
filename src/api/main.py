@@ -115,16 +115,37 @@ def create_app() -> FastAPI:
     async def get_stats():
         """Get system statistics."""
         db = get_db()
+        mlflow_manager = MLflowManager()
         
-        # Get counts from database
+        # Get counts from database using SQL
+        from sqlalchemy import text
+        with db.get_session() as session:
+            # Total articles
+            total_result = session.execute(text("SELECT COUNT(*) FROM raw_articles")).fetchone()
+            total_articles = total_result[0] if total_result else 0
+            
+            # Predictions today
+            today_result = session.execute(
+                text("""
+                    SELECT COUNT(*) FROM predictions 
+                    WHERE DATE(prediction_time) = DATE('now')
+                """)
+            ).fetchone()
+            predictions_today = today_result[0] if today_result else 0
+        
+        # Get feedback stats
         feedback_stats = db.get_feedback_stats()
         
+        # Get model versions (convert to string since MLflow returns int)
+        classifier_version = mlflow_manager.get_production_model_version(CLASSIFIER_MODEL_NAME)
+        summarizer_version = mlflow_manager.get_production_model_version(SUMMARIZER_MODEL_NAME)
+        
         return StatsResponse(
-            total_articles=0,  # Would query from db
-            predictions_today=0,  # Would query from db
+            total_articles=total_articles,
+            predictions_today=predictions_today,
             feedback_count=feedback_stats.get("classification_feedback", 0),
-            classifier_version=None,
-            summarizer_version=None,
+            classifier_version=str(classifier_version) if classifier_version else None,
+            summarizer_version=str(summarizer_version) if summarizer_version else None,
         )
     
     @app.get("/models", response_model=ModelsResponse, tags=["models"])
@@ -136,26 +157,26 @@ def create_app() -> FastAPI:
         summarizer_info = None
         
         try:
-            clf_version = mlflow_manager.get_production_version(CLASSIFIER_MODEL_NAME)
-            if clf_version:
+            clf_version_obj = mlflow_manager.get_latest_version(CLASSIFIER_MODEL_NAME, stages=["Production"])
+            if clf_version_obj:
                 classifier_info = ModelInfo(
                     name=CLASSIFIER_MODEL_NAME,
-                    version=clf_version["version"],
+                    version=clf_version_obj.version,
                     stage="Production",
-                    run_id=clf_version.get("run_id"),
+                    run_id=clf_version_obj.run_id,
                     metrics={},
                 )
         except Exception as e:
             logger.warning(f"Could not get classifier info: {e}")
         
         try:
-            sum_version = mlflow_manager.get_production_version(SUMMARIZER_MODEL_NAME)
-            if sum_version:
+            sum_version_obj = mlflow_manager.get_latest_version(SUMMARIZER_MODEL_NAME, stages=["Production"])
+            if sum_version_obj:
                 summarizer_info = ModelInfo(
                     name=SUMMARIZER_MODEL_NAME,
-                    version=sum_version["version"],
+                    version=sum_version_obj.version,
                     stage="Production",
-                    run_id=sum_version.get("run_id"),
+                    run_id=sum_version_obj.run_id,
                     metrics={},
                 )
         except Exception as e:
