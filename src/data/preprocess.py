@@ -71,7 +71,7 @@ class Preprocessor:
         
         return title
     
-    def process_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
+    def process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process a single article.
         
@@ -79,8 +79,13 @@ class Preprocessor:
             article: Raw article dictionary
             
         Returns:
-            Processed article dictionary
+            Processed article dictionary or None if invalid
         """
+        # Ensure article is a dictionary
+        if not isinstance(article, dict):
+            logger.warning(f"Skipping non-dictionary article: {type(article).__name__}")
+            return None
+        
         processed = article.copy()
         
         # Clean title
@@ -110,7 +115,7 @@ class Preprocessor:
         for article in articles:
             try:
                 p = self.process_article(article)
-                if p.get("title"):  # Only keep articles with valid titles
+                if p and p.get("title"):  # Only keep articles with valid titles
                     processed.append(p)
             except Exception as e:
                 logger.warning(f"Failed to process article: {e}")

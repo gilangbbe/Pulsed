@@ -49,8 +49,18 @@ class PapersWithCodeSource:
             response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
             
+            # Check if response is actually JSON
+            content_type = response.headers.get('content-type', '')
+            if 'application/json' not in content_type:
+                logger.warning(f"Papers With Code returned non-JSON response: {content_type}")
+                return articles
+            
             data = response.json()
             papers = data.get("results", [])
+            
+            if not papers:
+                logger.warning("Papers With Code returned no results")
+                return articles
             
             for paper in papers:
                 abstract = paper.get("abstract", "")
@@ -76,8 +86,12 @@ class PapersWithCodeSource:
             
             logger.info(f"Fetched {len(articles)} papers from Papers With Code")
             
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f"HTTP error from Papers With Code (may be rate limited): {e}")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching from Papers With Code: {e}")
+            logger.warning(f"Request error from Papers With Code: {e}")
+        except ValueError as e:
+            logger.warning(f"Invalid JSON from Papers With Code: {e}")
         except Exception as e:
             logger.error(f"Unexpected error fetching from Papers With Code: {e}")
         

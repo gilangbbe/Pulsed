@@ -30,7 +30,7 @@ class DataFetcher:
         self,
         include_arxiv: bool = True,
         include_reddit: bool = True,
-        include_pwc: bool = True,
+        include_pwc: bool = False,  # Disabled by default - API often returns HTML
         include_rss: bool = True,
         days_back: int = 1,
         data_version: Optional[str] = None,
@@ -63,9 +63,13 @@ class DataFetcher:
         if include_arxiv:
             try:
                 arxiv_articles = self.arxiv.fetch(days_back=days_back)
-                all_articles.extend(arxiv_articles)
-                stats["sources"]["arxiv"] = len(arxiv_articles)
-                logger.info(f"Fetched {len(arxiv_articles)} articles from ArXiv")
+                # Validate that we got dictionaries
+                valid_arxiv = [a for a in arxiv_articles if isinstance(a, dict)]
+                if len(valid_arxiv) != len(arxiv_articles):
+                    logger.warning(f"Filtered out {len(arxiv_articles) - len(valid_arxiv)} invalid ArXiv items")
+                all_articles.extend(valid_arxiv)
+                stats["sources"]["arxiv"] = len(valid_arxiv)
+                logger.info(f"Fetched {len(valid_arxiv)} articles from ArXiv")
             except Exception as e:
                 logger.error(f"ArXiv fetch failed: {e}")
                 stats["sources"]["arxiv"] = {"error": str(e)}
@@ -74,9 +78,13 @@ class DataFetcher:
         if include_reddit:
             try:
                 reddit_articles = self.reddit.fetch(time_filter="day")
-                all_articles.extend(reddit_articles)
-                stats["sources"]["reddit"] = len(reddit_articles)
-                logger.info(f"Fetched {len(reddit_articles)} articles from Reddit")
+                # Validate that we got dictionaries
+                valid_reddit = [a for a in reddit_articles if isinstance(a, dict)]
+                if len(valid_reddit) != len(reddit_articles):
+                    logger.warning(f"Filtered out {len(reddit_articles) - len(valid_reddit)} invalid Reddit items")
+                all_articles.extend(valid_reddit)
+                stats["sources"]["reddit"] = len(valid_reddit)
+                logger.info(f"Fetched {len(valid_reddit)} articles from Reddit")
             except Exception as e:
                 logger.error(f"Reddit fetch failed: {e}")
                 stats["sources"]["reddit"] = {"error": str(e)}
@@ -85,9 +93,13 @@ class DataFetcher:
         if include_pwc:
             try:
                 pwc_articles = self.pwc.fetch_trending()
-                all_articles.extend(pwc_articles)
-                stats["sources"]["papers_with_code"] = len(pwc_articles)
-                logger.info(f"Fetched {len(pwc_articles)} articles from Papers With Code")
+                # Validate that we got dictionaries
+                valid_pwc = [a for a in pwc_articles if isinstance(a, dict)]
+                if len(valid_pwc) != len(pwc_articles):
+                    logger.warning(f"Filtered out {len(pwc_articles) - len(valid_pwc)} invalid PWC items")
+                all_articles.extend(valid_pwc)
+                stats["sources"]["papers_with_code"] = len(valid_pwc)
+                logger.info(f"Fetched {len(valid_pwc)} articles from Papers With Code")
             except Exception as e:
                 logger.error(f"Papers With Code fetch failed: {e}")
                 stats["sources"]["papers_with_code"] = {"error": str(e)}
@@ -96,9 +108,13 @@ class DataFetcher:
         if include_rss:
             try:
                 rss_articles = self.rss.fetch()
-                all_articles.extend(rss_articles)
-                stats["sources"]["rss"] = len(rss_articles)
-                logger.info(f"Fetched {len(rss_articles)} articles from RSS feeds")
+                # Validate that we got dictionaries
+                valid_rss = [a for a in rss_articles if isinstance(a, dict)]
+                if len(valid_rss) != len(rss_articles):
+                    logger.warning(f"Filtered out {len(rss_articles) - len(valid_rss)} invalid RSS items")
+                all_articles.extend(valid_rss)
+                stats["sources"]["rss"] = len(valid_rss)
+                logger.info(f"Fetched {len(valid_rss)} articles from RSS feeds")
             except Exception as e:
                 logger.error(f"RSS fetch failed: {e}")
                 stats["sources"]["rss"] = {"error": str(e)}
@@ -155,6 +171,72 @@ class DataFetcher:
     ) -> List[Dict[str, Any]]:
         """Fetch only from Reddit."""
         return self.reddit.fetch(subreddits=subreddits, time_filter=time_filter)
+    
+    def fetch_raw(
+        self,
+        include_arxiv: bool = True,
+        include_reddit: bool = True,
+        include_pwc: bool = False,  # Disabled by default - API often returns HTML
+        include_rss: bool = True,
+        days_back: int = 1,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch articles from all enabled sources WITHOUT storing to database.
+        
+        Args:
+            include_arxiv: Whether to fetch from ArXiv
+            include_reddit: Whether to fetch from Reddit
+            include_pwc: Whether to fetch from Papers With Code
+            include_rss: Whether to fetch from RSS feeds
+            days_back: Number of days to look back
+            
+        Returns:
+            List of raw article dictionaries
+        """
+        logger.info("Fetching raw articles from sources")
+        all_articles = []
+        
+        # Fetch from ArXiv
+        if include_arxiv:
+            try:
+                arxiv_articles = self.arxiv.fetch(days_back=days_back)
+                valid_arxiv = [a for a in arxiv_articles if isinstance(a, dict)]
+                all_articles.extend(valid_arxiv)
+                logger.info(f"Fetched {len(valid_arxiv)} articles from ArXiv")
+            except Exception as e:
+                logger.error(f"ArXiv fetch failed: {e}")
+        
+        # Fetch from Reddit
+        if include_reddit:
+            try:
+                reddit_articles = self.reddit.fetch(time_filter="day")
+                valid_reddit = [a for a in reddit_articles if isinstance(a, dict)]
+                all_articles.extend(valid_reddit)
+                logger.info(f"Fetched {len(valid_reddit)} articles from Reddit")
+            except Exception as e:
+                logger.error(f"Reddit fetch failed: {e}")
+        
+        # Fetch from Papers With Code
+        if include_pwc:
+            try:
+                pwc_articles = self.pwc.fetch_trending()
+                valid_pwc = [a for a in pwc_articles if isinstance(a, dict)]
+                all_articles.extend(valid_pwc)
+                logger.info(f"Fetched {len(valid_pwc)} articles from Papers With Code")
+            except Exception as e:
+                logger.error(f"Papers With Code fetch failed: {e}")
+        
+        # Fetch from RSS feeds
+        if include_rss:
+            try:
+                rss_articles = self.rss.fetch()
+                valid_rss = [a for a in rss_articles if isinstance(a, dict)]
+                all_articles.extend(valid_rss)
+                logger.info(f"Fetched {len(valid_rss)} articles from RSS feeds")
+            except Exception as e:
+                logger.error(f"RSS fetch failed: {e}")
+        
+        return all_articles
     
     def search(
         self,

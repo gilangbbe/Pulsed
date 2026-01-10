@@ -25,19 +25,28 @@ class RSSFeedSource:
         "tensorflow": "https://blog.tensorflow.org/feeds/posts/default?alt=rss",
         "towards_ds": "https://towardsdatascience.com/feed",
         "mit_news_ai": "https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml",
-        "arxiv_sanity": "https://arxiv-sanity-lite.com/rss.xml",
+        # "arxiv_sanity": "https://arxiv-sanity-lite.com/rss.xml",
     }
     
-    def __init__(self, custom_feeds: Optional[Dict[str, str]] = None):
+    def __init__(self, custom_feeds: Optional[Dict[str, str]] = None, verify_ssl: bool = False):
         """
         Initialize RSS feed source.
         
         Args:
             custom_feeds: Additional custom feeds to include {name: url}
+            verify_ssl: Whether to verify SSL certificates (disable for local testing)
         """
         self.feeds = self.DEFAULT_FEEDS.copy()
         if custom_feeds:
             self.feeds.update(custom_feeds)
+        self.verify_ssl = verify_ssl
+        
+        # Configure SSL if needed
+        if not verify_ssl:
+            import ssl
+            if hasattr(ssl, '_create_unverified_context'):
+                ssl._create_default_https_context = ssl._create_unverified_context
+                logger.warning("SSL verification disabled for RSS feeds")
     
     def _generate_article_id(self, entry: Dict, feed_name: str) -> str:
         """Generate a unique article ID from RSS entry."""
