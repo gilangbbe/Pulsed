@@ -9,7 +9,7 @@ class SummarizerConfig:
     """Configuration for the summarizer model."""
     
     # Model architecture
-    model_name: str = "facebook/bart-large-cnn"
+    model_name: str = "sshleifer/distilbart-cnn-12-6"
     
     # Generation parameters - Brief summaries (for "important")
     brief_max_length: int = 100

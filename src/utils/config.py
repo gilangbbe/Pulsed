@@ -44,7 +44,7 @@ class MLflowConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Model configuration."""
     classifier_model_name: str = os.getenv("CLASSIFIER_MODEL_NAME", "distilbert-base-uncased")
-    summarizer_model_name: str = os.getenv("SUMMARIZER_MODEL_NAME", "facebook/bart-large-cnn")
+    summarizer_model_name: str = os.getenv("SUMMARIZER_MODEL_NAME", "sshleifer/distilbart-cnn-12-6")
     
     # Inference settings
     classifier_batch_size: int = 32
