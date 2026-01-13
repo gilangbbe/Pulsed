@@ -184,8 +184,8 @@ class SummarizerRetrainPipeline:
             
             # Mark feedback as used
             if results["promoted"]:
-                self.db.mark_feedback_used(feedback_ids)
-                logger.info(f"Marked {len(feedback_ids)} feedback items as used")
+                self.db.mark_feedback_used(feedback_ids, model_type="summarizer")
+                logger.info(f"Marked {len(feedback_ids)} feedback items as used for summarizer")
             
         except Exception as e:
             logger.error(f"Retraining failed: {e}")

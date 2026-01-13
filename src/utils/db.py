@@ -73,10 +73,14 @@ CREATE TABLE IF NOT EXISTS feedback (
     summarizer_version TEXT,
     feedback_time TIMESTAMP NOT NULL,
     used_for_training BOOLEAN DEFAULT FALSE,
+    used_for_classifier_training BOOLEAN DEFAULT FALSE,
+    used_for_summarizer_training BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (article_id) REFERENCES raw_articles(article_id)
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_time ON feedback(feedback_time);
 CREATE INDEX IF NOT EXISTS idx_feedback_used ON feedback(used_for_training);
+CREATE INDEX IF NOT EXISTS idx_feedback_classifier_used ON feedback(used_for_classifier_training);
+CREATE INDEX IF NOT EXISTS idx_feedback_summarizer_used ON feedback(used_for_summarizer_training);
 
 -- Training run metadata
 CREATE TABLE IF NOT EXISTS training_runs (
@@ -515,7 +519,7 @@ class DatabaseManager:
             )
     
     def get_unused_classification_feedback(self) -> List[Dict[str, Any]]:
-        """Get classification feedback not yet used for training."""
+        """Get classification feedback not yet used for classifier training."""
         with self.get_session() as session:
             result = session.execute(
                 text("""
@@ -523,42 +527,68 @@ class DatabaseManager:
                     FROM feedback f
                     INNER JOIN raw_articles a ON f.article_id = a.article_id
                     WHERE f.correct_label IS NOT NULL 
-                    AND f.used_for_training = FALSE
+                    AND f.used_for_classifier_training = FALSE
                 """)
             ).fetchall()
             
             columns = ["feedback_id", "article_id", "predicted_label", "correct_label",
                       "classifier_version", "summary_rating", "summary_edited_text",
                       "summary_issues", "summarizer_version", "feedback_time", 
-                      "used_for_training", "title", "abstract", "full_text"]
+                      "used_for_training", "used_for_classifier_training", 
+                      "used_for_summarizer_training", "title", "abstract", "full_text"]
             return [dict(zip(columns, row)) for row in result]
     
     def get_unused_summary_feedback(self) -> List[Dict[str, Any]]:
-        """Get summary feedback not yet used for training."""
+        """Get summary feedback not yet used for summarizer training."""
         with self.get_session() as session:
             result = session.execute(
                 text("""
                     SELECT f.*, a.title, a.abstract, a.full_text 
                     FROM feedback f
                     INNER JOIN raw_articles a ON f.article_id = a.article_id
-                    WHERE f.summary_rating IS NOT NULL 
-                    AND f.used_for_training = FALSE
+                    WHERE (f.summary_rating IS NOT NULL OR f.summary_edited_text IS NOT NULL)
+                    AND f.used_for_summarizer_training = FALSE
                 """)
             ).fetchall()
             
             columns = ["feedback_id", "article_id", "predicted_label", "correct_label",
                       "classifier_version", "summary_rating", "summary_edited_text",
                       "summary_issues", "summarizer_version", "feedback_time",
-                      "used_for_training", "title", "abstract", "full_text"]
+                      "used_for_training", "used_for_classifier_training",
+                      "used_for_summarizer_training", "title", "abstract", "full_text"]
             return [dict(zip(columns, row)) for row in result]
     
-    def mark_feedback_used(self, feedback_ids: List[int]):
-        """Mark feedback as used for training."""
+    def mark_feedback_used(self, feedback_ids: List[int], model_type: str = "both"):
+        """Mark feedback as used for training.
+        
+        Args:
+            feedback_ids: List of feedback IDs to mark as used
+            model_type: Which model used the feedback - 'classifier', 'summarizer', or 'both'
+        """
+        if not feedback_ids:
+            return
+            
         with self.get_session() as session:
-            session.execute(
-                text("UPDATE feedback SET used_for_training = TRUE WHERE feedback_id IN :ids"),
-                {"ids": tuple(feedback_ids)}
-            )
+            from sqlalchemy import bindparam
+            
+            # Set the appropriate columns based on model type
+            if model_type == "classifier":
+                stmt = text("""UPDATE feedback 
+                              SET used_for_training = TRUE, used_for_classifier_training = TRUE 
+                              WHERE feedback_id IN :ids""")
+            elif model_type == "summarizer":
+                stmt = text("""UPDATE feedback 
+                              SET used_for_training = TRUE, used_for_summarizer_training = TRUE 
+                              WHERE feedback_id IN :ids""")
+            else:  # both
+                stmt = text("""UPDATE feedback 
+                              SET used_for_training = TRUE, 
+                                  used_for_classifier_training = TRUE,
+                                  used_for_summarizer_training = TRUE 
+                              WHERE feedback_id IN :ids""")
+            
+            stmt = stmt.bindparams(bindparam("ids", expanding=True))
+            session.execute(stmt, {"ids": feedback_ids})
     
     # Digest operations
     def get_digest_articles(self, since_hours: int = 24) -> Dict[str, List[Dict[str, Any]]]:

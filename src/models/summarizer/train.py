@@ -205,7 +205,7 @@ class SummarizerTrainer:
                 weight_decay=self.config.weight_decay,
                 warmup_ratio=self.config.warmup_ratio,
                 gradient_accumulation_steps=self.config.gradient_accumulation_steps,
-                evaluation_strategy="epoch",
+                eval_strategy="epoch",
                 save_strategy="epoch",
                 load_best_model_at_end=True,
                 predict_with_generate=True,
