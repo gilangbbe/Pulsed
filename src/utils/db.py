@@ -640,22 +640,26 @@ class DatabaseManager:
             return [{"date": row[0], "label": row[1], "count": row[2]} for row in result]
     
     def get_feedback_stats(self) -> Dict[str, int]:
-        """Get feedback statistics."""
+        """Get feedback statistics with model-specific tracking."""
         with self.get_session() as session:
             result = session.execute(
                 text("""
                     SELECT 
-                        SUM(CASE WHEN correct_label IS NOT NULL THEN 1 ELSE 0 END) as classification_feedback,
-                        SUM(CASE WHEN summary_rating IS NOT NULL THEN 1 ELSE 0 END) as summary_feedback,
-                        SUM(CASE WHEN used_for_training = FALSE THEN 1 ELSE 0 END) as unused_feedback
+                        SUM(CASE WHEN correct_label IS NOT NULL THEN 1 ELSE 0 END) as total_classification_feedback,
+                        SUM(CASE WHEN correct_label IS NOT NULL AND used_for_classifier_training = FALSE THEN 1 ELSE 0 END) as unused_classification_feedback,
+                        SUM(CASE WHEN (summary_rating IS NOT NULL OR summary_edited_text IS NOT NULL) THEN 1 ELSE 0 END) as total_summary_feedback,
+                        SUM(CASE WHEN (summary_rating IS NOT NULL OR summary_edited_text IS NOT NULL) AND used_for_summarizer_training = FALSE THEN 1 ELSE 0 END) as unused_summary_feedback,
+                        SUM(CASE WHEN used_for_training = FALSE THEN 1 ELSE 0 END) as total_unused_feedback
                     FROM feedback
                 """)
             ).fetchone()
             
             return {
-                "classification_feedback": result[0] or 0,
-                "summary_feedback": result[1] or 0,
-                "unused_feedback": result[2] or 0,
+                "total_classification_feedback": result[0] or 0,
+                "unused_classification_feedback": result[1] or 0,
+                "total_summary_feedback": result[2] or 0,
+                "unused_summary_feedback": result[3] or 0,
+                "total_unused_feedback": result[4] or 0,
             }
 
 

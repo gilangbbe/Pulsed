@@ -94,27 +94,36 @@ class MetricsCollector:
     
     def collect_feedback_metrics(self) -> Dict[str, Any]:
         """
-        Collect feedback metrics.
+        Collect feedback metrics with model-specific tracking.
         
         Returns:
             Dictionary with feedback statistics
         """
         stats = self.db.get_feedback_stats()
         
-        total_feedback = (
-            stats.get("classification_feedback", 0) + 
-            stats.get("summary_feedback", 0)
-        )
+        total_classification = stats.get("total_classification_feedback", 0)
+        unused_classification = stats.get("unused_classification_feedback", 0)
+        total_summary = stats.get("total_summary_feedback", 0)
+        unused_summary = stats.get("unused_summary_feedback", 0)
         
         return {
-            "classification_feedback": stats.get("classification_feedback", 0),
-            "summary_feedback": stats.get("summary_feedback", 0),
-            "total_feedback": total_feedback,
-            "unused_feedback": stats.get("unused_feedback", 0),
-            "feedback_utilization": round(
-                (total_feedback - stats.get("unused_feedback", 0)) / 
-                max(total_feedback, 1) * 100, 1
+            # Classifier feedback
+            "total_classification_feedback": total_classification,
+            "unused_classification_feedback": unused_classification,
+            "used_classification_feedback": total_classification - unused_classification,
+            "classification_utilization_pct": round(
+                (total_classification - unused_classification) / max(total_classification, 1) * 100, 1
             ),
+            # Summarizer feedback
+            "total_summary_feedback": total_summary,
+            "unused_summary_feedback": unused_summary,
+            "used_summary_feedback": total_summary - unused_summary,
+            "summary_utilization_pct": round(
+                (total_summary - unused_summary) / max(total_summary, 1) * 100, 1
+            ),
+            # Overall
+            "total_feedback": total_classification + total_summary,
+            "total_unused_feedback": stats.get("total_unused_feedback", 0),
         }
     
     def collect_system_metrics(self) -> Dict[str, Any]:
