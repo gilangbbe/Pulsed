@@ -19,6 +19,7 @@ requests>=2.31.0
 
 # Database
 sqlalchemy>=2.0.0
+supabase>=2.0.0
 
 # API & Serving
 fastapi>=0.100.0
