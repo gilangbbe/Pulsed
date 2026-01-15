@@ -65,7 +65,7 @@ export default function DigestPreview() {
       url: 'https://openai.com/research/gpt-4',
       source: 'blog',
       synced_at: new Date().toISOString(),
-      predicted_label: 'worth_reading',
+      predicted_label: 'worth_learning',
       confidence: 0.88,
       summary_text: 'GPT-4 demonstrates human-level performance on various professional and academic benchmarks. The model shows significant improvements in reasoning and reduced hallucinations compared to GPT-3.5.',
       key_takeaways: ['Multimodal capabilities', 'Improved reasoning', 'Better factual accuracy'],
@@ -75,7 +75,7 @@ export default function DigestPreview() {
   const getLabelBadge = (label?: string) => {
     const colors: Record<string, string> = {
       important: 'bg-red-100 text-red-800',
-      worth_reading: 'bg-blue-100 text-blue-800',
+      worth_learning: 'bg-blue-100 text-blue-800',
       reference: 'bg-gray-100 text-gray-800',
       skip: 'bg-gray-100 text-gray-600',
     }
