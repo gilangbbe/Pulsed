@@ -102,15 +102,15 @@ serve(async (req: Request) => {
       console.error("Error creating digest:", digestError)
     }
 
-    // Generate HTML email
-    const htmlContent = generateEmailHTML(articles, today)
-
     // Send emails via Resend
     let successful = 0
     let failed = 0
 
     for (const subscriber of subscribers) {
       try {
+        // Generate HTML email with subscriber ID for feedback tracking
+        const htmlContent = generateEmailHTML(articles, today, subscriber.id)
+        
         const unsubscribeUrl = `${SITE_URL}/unsubscribe?token=${subscriber.confirmation_token}`
         const personalizedHtml = htmlContent.replace(
           "{{UNSUBSCRIBE_URL}}",
@@ -207,7 +207,11 @@ function formatDate(date: Date): string {
   })
 }
 
-function generateEmailHTML(articles: Article[], dateStr: string): string {
+function generateEmailHTML(
+  articles: Article[], 
+  dateStr: string, 
+  subscriberId?: string
+): string {
   const date = new Date(dateStr)
 
   const articleSections = articles
@@ -264,6 +268,21 @@ function generateEmailHTML(articles: Article[], dateStr: string): string {
               `
                   : ""
               }
+              <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #F3F4F6;">
+                <p style="margin: 0 0 8px 0; font-size: 11px; color: #9CA3AF;">Was this article helpful?</p>
+                <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&rating=useful&subscriber_id=${subscriberId || ''}" 
+                   style="display: inline-block; margin-right: 8px; padding: 6px 12px; background-color: #10B981; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                  👍 Useful
+                </a>
+                <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&rating=not_useful&subscriber_id=${subscriberId || ''}" 
+                   style="display: inline-block; margin-right: 8px; padding: 6px 12px; background-color: #EF4444; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                  👎 Not Useful
+                </a>
+                <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&rating=already_knew&subscriber_id=${subscriberId || ''}" 
+                   style="display: inline-block; padding: 6px 12px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                  📚 Already Knew
+                </a>
+              </div>
             </td>
           </tr>
         </table>

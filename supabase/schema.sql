@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
     name TEXT,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'unsubscribed', 'bounced')),
     digest_frequency TEXT DEFAULT 'daily' CHECK (digest_frequency IN ('daily', 'weekly')),
-    preferences JSONB DEFAULT '{"categories": ["important", "worth_reading"]}',
+    preferences JSONB DEFAULT '{"categories": ["important", "worth_learning"]}',
     confirmation_token UUID DEFAULT gen_random_uuid(),
     confirmed_at TIMESTAMPTZ,
     unsubscribed_at TIMESTAMPTZ,
@@ -305,11 +305,11 @@ BEGIN
     LEFT JOIN predictions p ON a.id = p.article_id
     LEFT JOIN summaries s ON a.id = s.article_id
     WHERE DATE(a.synced_at) = CURRENT_DATE
-    AND p.predicted_label IN ('important', 'worth_reading')
+    AND p.predicted_label IN ('important', 'worth_learning')
     ORDER BY 
         CASE p.predicted_label 
             WHEN 'important' THEN 1 
-            WHEN 'worth_reading' THEN 2 
+            WHEN 'worth_learning' THEN 2 
             ELSE 3 
         END,
         p.confidence DESC;
@@ -374,7 +374,7 @@ VALUES
 INSERT INTO predictions (article_id, predicted_label, confidence, model_version)
 VALUES 
     ('sample-1', 'important', 0.95, 'v1.0'),
-    ('sample-2', 'worth_reading', 0.82, 'v1.0');
+    ('sample-2', 'worth_learning', 0.82, 'v1.0');
 
 INSERT INTO summaries (article_id, summary_text, key_takeaways, model_version)
 VALUES 
