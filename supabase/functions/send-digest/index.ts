@@ -33,7 +33,7 @@ interface Subscriber {
   confirmation_token: string
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
     // Verify request (optional: add secret header check)
     const { frequency = "daily" } = await req.json().catch(() => ({}))
@@ -186,10 +186,15 @@ serve(async (req) => {
     )
   } catch (error) {
     console.error("Error in send-digest:", error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    })
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Failed to send digest" 
+      }), 
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    )
   }
 })
 
