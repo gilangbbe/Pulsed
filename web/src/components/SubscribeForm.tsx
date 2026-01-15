@@ -15,8 +15,8 @@ export default function SubscribeForm() {
     setStatus('loading')
 
     try {
-      // Insert subscriber
-      const { data, error } = await supabase
+      // Insert subscriber with minimal return to avoid SELECT RLS check
+      const { error } = await supabase
         .from('subscribers')
         .insert([
           {
@@ -26,8 +26,6 @@ export default function SubscribeForm() {
             status: 'pending',
           }
         ])
-        .select()
-        .single()
 
       if (error) {
         if (error.code === '23505') {
@@ -40,12 +38,11 @@ export default function SubscribeForm() {
         return
       }
 
-      // Track analytics event
+      // Track analytics event (no need to get subscriber_id, just track the event)
       await supabase.from('analytics_events').insert([
         {
           event_type: 'subscribe',
-          subscriber_id: data.id,
-          metadata: { source: 'website' }
+          metadata: { source: 'website', email: email.toLowerCase().trim() }
         }
       ])
 
