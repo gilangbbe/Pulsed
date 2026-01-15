@@ -108,3 +108,6 @@ secrets/
 # Web
 node_modules
 .next
+
+# supabase
+.temp
