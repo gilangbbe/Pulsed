@@ -115,9 +115,6 @@ export default function Home() {
             <Link href="/unsubscribe" className="hover:text-white transition-colors">
               Unsubscribe
             </Link>
-            <a href="https://github.com" className="hover:text-white transition-colors">
-              GitHub
-            </a>
           </div>
           <p className="text-xs mt-8 text-gray-500">
             © {new Date().getFullYear()} Pulsed. All rights reserved.
