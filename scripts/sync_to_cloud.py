@@ -17,6 +17,9 @@ import sqlite3
 import sys
 from datetime import datetime, date, timedelta
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv() 
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -58,17 +61,17 @@ def sync_articles(supabase: Client, conn: sqlite3.Connection, target_date: Optio
     cursor = conn.cursor()
     
     if sync_all:
-        cursor.execute("SELECT * FROM articles")
+        cursor.execute("SELECT * FROM raw_articles")
     elif target_date:
         cursor.execute(
-            "SELECT * FROM articles WHERE DATE(fetched_date) = ?",
+            "SELECT * FROM raw_articles WHERE DATE(fetched_date) = ?",
             (target_date.isoformat(),)
         )
     else:
         # Default: sync today's articles
         today = date.today().isoformat()
         cursor.execute(
-            "SELECT * FROM articles WHERE DATE(fetched_date) = ?",
+            "SELECT * FROM raw_articles WHERE DATE(fetched_date) = ?",
             (today,)
         )
     
@@ -78,14 +81,25 @@ def sync_articles(supabase: Client, conn: sqlite3.Connection, target_date: Optio
     synced = 0
     errors = 0
     
-    for article in articles:
+    for row in articles:
+        article = dict(row)  # Convert Row to dict for .get() access
+        # Extract authors from metadata JSON if available
+        authors = []
+        if article.get("metadata"):
+            try:
+                import json
+                metadata = json.loads(article["metadata"]) if isinstance(article["metadata"], str) else article["metadata"]
+                authors = metadata.get("authors", [])
+            except:
+                pass
+        
         article_data = {
-            "id": article["id"],
+            "id": article["article_id"],
             "title": article["title"],
             "abstract": article.get("abstract"),
             "url": article.get("url"),
             "source": article.get("source"),
-            "authors": article.get("authors", "").split(",") if article.get("authors") else [],
+            "authors": authors,
             "published_date": article.get("published_date"),
             "fetched_date": article.get("fetched_date"),
             "synced_at": datetime.utcnow().isoformat(),
@@ -96,7 +110,7 @@ def sync_articles(supabase: Client, conn: sqlite3.Connection, target_date: Optio
             supabase.table("articles").upsert(article_data).execute()
             synced += 1
         except Exception as e:
-            print(f"  Error syncing article {article['id']}: {e}")
+            print(f"  Error syncing article {article['article_id']}: {e}")
             errors += 1
     
     print(f"  Synced {synced} articles, {errors} errors")
@@ -110,19 +124,19 @@ def sync_predictions(supabase: Client, conn: sqlite3.Connection, target_date: Op
     if sync_all:
         cursor.execute("""
             SELECT p.* FROM predictions p
-            JOIN articles a ON p.article_id = a.id
+            JOIN raw_articles a ON p.article_id = a.article_id
         """)
     elif target_date:
         cursor.execute("""
             SELECT p.* FROM predictions p
-            JOIN articles a ON p.article_id = a.id
+            JOIN raw_articles a ON p.article_id = a.article_id
             WHERE DATE(a.fetched_date) = ?
         """, (target_date.isoformat(),))
     else:
         today = date.today().isoformat()
         cursor.execute("""
             SELECT p.* FROM predictions p
-            JOIN articles a ON p.article_id = a.id
+            JOIN raw_articles a ON p.article_id = a.article_id
             WHERE DATE(a.fetched_date) = ?
         """, (today,))
     
@@ -132,13 +146,14 @@ def sync_predictions(supabase: Client, conn: sqlite3.Connection, target_date: Op
     synced = 0
     errors = 0
     
-    for pred in predictions:
+    for row in predictions:
+        pred = dict(row)  # Convert Row to dict for .get() access
         pred_data = {
             "article_id": pred["article_id"],
             "predicted_label": pred["predicted_label"],
             "confidence": pred.get("confidence"),
-            "model_version": pred.get("model_version"),
-            "created_at": pred.get("created_at"),
+            "model_version": pred.get("classifier_version"),  # Local uses classifier_version
+            "created_at": pred.get("prediction_time"),  # Local uses prediction_time
             "synced_at": datetime.utcnow().isoformat(),
         }
         
@@ -164,19 +179,19 @@ def sync_summaries(supabase: Client, conn: sqlite3.Connection, target_date: Opti
     if sync_all:
         cursor.execute("""
             SELECT s.* FROM summaries s
-            JOIN articles a ON s.article_id = a.id
+            JOIN raw_articles a ON s.article_id = a.article_id
         """)
     elif target_date:
         cursor.execute("""
             SELECT s.* FROM summaries s
-            JOIN articles a ON s.article_id = a.id
+            JOIN raw_articles a ON s.article_id = a.article_id
             WHERE DATE(a.fetched_date) = ?
         """, (target_date.isoformat(),))
     else:
         today = date.today().isoformat()
         cursor.execute("""
             SELECT s.* FROM summaries s
-            JOIN articles a ON s.article_id = a.id
+            JOIN raw_articles a ON s.article_id = a.article_id
             WHERE DATE(a.fetched_date) = ?
         """, (today,))
     
@@ -186,7 +201,8 @@ def sync_summaries(supabase: Client, conn: sqlite3.Connection, target_date: Opti
     synced = 0
     errors = 0
     
-    for summary in summaries:
+    for row in summaries:
+        summary = dict(row)  # Convert Row to dict for .get() access
         # Parse key_takeaways if stored as JSON string
         key_takeaways = summary.get("key_takeaways")
         if isinstance(key_takeaways, str):
@@ -201,8 +217,8 @@ def sync_summaries(supabase: Client, conn: sqlite3.Connection, target_date: Opti
             "summary_text": summary["summary_text"],
             "summary_type": summary.get("summary_type", "brief"),
             "key_takeaways": key_takeaways or [],
-            "model_version": summary.get("model_version"),
-            "created_at": summary.get("created_at"),
+            "model_version": summary.get("summarizer_version"),  # Local uses summarizer_version
+            "created_at": summary.get("generation_time"),  # Local uses generation_time
             "synced_at": datetime.utcnow().isoformat(),
         }
         

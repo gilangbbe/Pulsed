@@ -314,7 +314,7 @@ class DatabaseManager:
             
             if result:
                 columns = ["prediction_id", "article_id", "classifier_version", 
-                          "label", "confidence", "prediction_time", "latency_ms"]
+                          "predicted_label", "confidence", "prediction_time", "latency_ms"]
                 return dict(zip(columns, result))
             return None
     
