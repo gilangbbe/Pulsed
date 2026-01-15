@@ -10,27 +10,55 @@ export default function DigestPreview() {
   useEffect(() => {
     async function fetchPreview() {
       try {
-        // Fetch recent articles with predictions and summaries
-        const { data, error } = await supabase
+        // Fetch articles
+        const { data: articlesData, error: articlesError } = await supabase
           .from('articles')
-          .select(`
-            *,
-            predictions (*),
-            summaries (*)
-          `)
+          .select('*')
           .order('synced_at', { ascending: false })
           .limit(3)
 
-        if (error) throw error
+        if (articlesError) throw articlesError
+        
+        if (!articlesData || articlesData.length === 0) {
+          setArticles(getSampleArticles())
+          setLoading(false)
+          return
+        }
+
+        // Fetch predictions for these articles
+        const articleIds = articlesData.map(a => a.id)
+        const { data: predictionsData } = await supabase
+          .from('predictions')
+          .select('*')
+          .in('article_id', articleIds)
+
+        // Fetch summaries for these articles
+        const { data: summariesData } = await supabase
+          .from('summaries')
+          .select('*')
+          .in('article_id', articleIds)
+
+        // Create lookup maps
+        const predictionsMap = new Map(
+          (predictionsData || []).map(p => [p.article_id, p])
+        )
+        const summariesMap = new Map(
+          (summariesData || []).map(s => [s.article_id, s])
+        )
 
         // Transform data
-        const transformedArticles: DigestArticle[] = (data || []).map((article: any) => ({
-          ...article,
-          predicted_label: article.predictions?.[0]?.predicted_label,
-          confidence: article.predictions?.[0]?.confidence,
-          summary_text: article.summaries?.[0]?.summary_text,
-          key_takeaways: article.summaries?.[0]?.key_takeaways,
-        }))
+        const transformedArticles: DigestArticle[] = articlesData.map((article: any) => {
+          const prediction = predictionsMap.get(article.id)
+          const summary = summariesMap.get(article.id)
+          
+          return {
+            ...article,
+            predicted_label: prediction?.predicted_label,
+            confidence: prediction?.confidence,
+            summary_text: summary?.summary_text,
+            key_takeaways: summary?.key_takeaways,
+          }
+        })
 
         setArticles(transformedArticles)
       } catch (error) {
