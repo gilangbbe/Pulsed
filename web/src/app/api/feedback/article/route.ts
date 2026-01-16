@@ -63,12 +63,13 @@ export async function GET(request: NextRequest) {
       feedbackData.summary_rating = summary_rating
     }
 
-    // Insert or update feedback
+    // Insert or update feedback (using count:null to avoid RLS SELECT check)
     const { error } = await supabase
       .from('subscriber_feedback')
       .upsert(feedbackData, {
         onConflict: 'subscriber_id,article_id',
         ignoreDuplicates: false,
+        count: null, // Don't return data to avoid SELECT RLS policy check
       })
 
     if (error) throw error
