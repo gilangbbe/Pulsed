@@ -213,6 +213,17 @@ CREATE POLICY "Service role has full access to daily_stats" ON daily_stats
 CREATE POLICY "Service role has full access to feedback" ON subscriber_feedback
     FOR ALL USING (auth.role() = 'service_role');
 
+-- Allow anonymous users to insert/update their own feedback (via email links)
+CREATE POLICY "Anyone can submit feedback" ON subscriber_feedback
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Anyone can update feedback" ON subscriber_feedback
+    FOR UPDATE USING (true);
+
+-- Allow anonymous users to read feedback they just submitted
+CREATE POLICY "Anyone can read feedback" ON subscriber_feedback
+    FOR SELECT USING (true);
+
 -- ============================================
 -- FUNCTIONS
 -- ============================================
