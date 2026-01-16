@@ -490,10 +490,20 @@ class DatabaseManager:
         corrected_value: Optional[str] = None,
         user_id: Optional[str] = None,
         comment: Optional[str] = None,
+        summary_rating: Optional[int] = None,  # For numerical summary scores
     ):
         """
         Generic method to add feedback (for API compatibility).
         Routes to appropriate specific method.
+        
+        Args:
+            feedback_type: 'classification' or 'summary'
+            article_id: ID of the article
+            original_value: Original predicted value
+            corrected_value: Corrected value or rating ('good'/'poor')
+            user_id: Optional user/subscriber ID
+            comment: Optional comment
+            summary_rating: Optional numerical summary score (unused, kept for compatibility)
         """
         if feedback_type == "classification":
             # Get the classifier version from the prediction
@@ -513,7 +523,7 @@ class DatabaseManager:
             
             self.insert_summary_feedback(
                 article_id=article_id,
-                rating=corrected_value or "unknown",
+                rating=corrected_value or "unknown",  # 'good' or 'poor'
                 summarizer_version=summarizer_version,
                 issues=comment,
             )

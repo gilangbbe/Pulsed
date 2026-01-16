@@ -33,7 +33,7 @@ class SummarizerRetrainPipeline:
         # Count edited summaries (most valuable for training)
         edited_count = sum(1 for f in feedback if f.get("summary_edited_text"))
         good_count = sum(1 for f in feedback if f.get("summary_rating") == "good")
-        bad_count = sum(1 for f in feedback if f.get("summary_rating") == "bad")
+        poor_count = sum(1 for f in feedback if f.get("summary_rating") == "poor")
         
         needs_retrain = len(feedback) >= self.threshold
         
@@ -42,7 +42,7 @@ class SummarizerRetrainPipeline:
             "feedback_count": len(feedback),
             "edited_count": edited_count,
             "good_count": good_count,
-            "bad_count": bad_count,
+            "poor_count": poor_count,
             "threshold": self.threshold,
         }
     
