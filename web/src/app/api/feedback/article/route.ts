@@ -63,24 +63,25 @@ export async function GET(request: NextRequest) {
       feedbackData.summary_rating = summary_rating
     }
 
-    // Insert or update feedback (using count:null to avoid RLS SELECT check)
+    // Insert or update feedback (don't chain .select() to avoid RLS SELECT check)
     const { error } = await supabase
       .from('subscriber_feedback')
       .upsert(feedbackData, {
         onConflict: 'subscriber_id,article_id',
         ignoreDuplicates: false,
-        count: null, // Don't return data to avoid SELECT RLS policy check
       })
 
     if (error) throw error
 
     // Track analytics event
-    await supabase.from('analytics_events').insert({
-      event_type: 'feedback_submitted',
-      subscriber_id: subscriber_id || null,
-      article_id,
-      metadata: { rating, summary_rating },
-    })
+    await supabase.from('analytics_events').insert([
+      {
+        event_type: 'feedback_submitted',
+        subscriber_id: subscriber_id || null,
+        article_id,
+        metadata: { rating, summary_rating },
+      }
+    ])
 
     // Return HTML response for browser
     return new NextResponse(
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Don't chain .select() to avoid RLS SELECT check for anonymous users
     const { error } = await supabase
       .from('subscriber_feedback')
       .upsert({
@@ -197,12 +199,14 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    await supabase.from('analytics_events').insert({
-      event_type: 'feedback_submitted',
-      subscriber_id: subscriber_id || null,
-      article_id,
-      metadata: { rating, has_comment: !!comment },
-    })
+    await supabase.from('analytics_events').insert([
+      {
+        event_type: 'feedback_submitted',
+        subscriber_id: subscriber_id || null,
+        article_id,
+        metadata: { rating, comment },
+      }
+    ])
 
     return NextResponse.json({ success: true })
   } catch (error) {
