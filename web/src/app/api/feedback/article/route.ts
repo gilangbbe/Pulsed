@@ -11,33 +11,64 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const article_id = searchParams.get('article_id')
     const rating = searchParams.get('rating')
+    const summary_rating = searchParams.get('summary_rating')
     const subscriber_id = searchParams.get('subscriber_id')
 
-    if (!article_id || !rating) {
+    if (!article_id) {
       return NextResponse.json(
-        { error: 'Missing article_id or rating' },
+        { error: 'Missing article_id' },
         { status: 400 }
       )
     }
 
-    // Validate rating
-    const validRatings = ['useful', 'not_useful', 'already_knew']
-    if (!validRatings.includes(rating)) {
+    if (!rating && !summary_rating) {
       return NextResponse.json(
-        { error: 'Invalid rating. Must be: useful, not_useful, or already_knew' },
+        { error: 'Must provide either rating or summary_rating' },
         { status: 400 }
       )
     }
 
-    // Insert feedback
+    // Validate ratings
+    if (rating) {
+      const validRatings = ['useful', 'not_useful', 'already_knew']
+      if (!validRatings.includes(rating)) {
+        return NextResponse.json(
+          { error: 'Invalid rating. Must be: useful, not_useful, or already_knew' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (summary_rating) {
+      const validSummaryRatings = ['good', 'poor']
+      if (!validSummaryRatings.includes(summary_rating)) {
+        return NextResponse.json(
+          { error: 'Invalid summary_rating. Must be: good or poor' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Build feedback object
+    const feedbackData: any = {
+      subscriber_id: subscriber_id || null,
+      article_id,
+    }
+
+    if (rating) {
+      feedbackData.rating = rating
+    }
+
+    if (summary_rating) {
+      feedbackData.summary_rating = summary_rating
+    }
+
+    // Insert or update feedback
     const { error } = await supabase
       .from('subscriber_feedback')
-      .upsert({
-        subscriber_id: subscriber_id || null,
-        article_id,
-        rating,
-      }, {
+      .upsert(feedbackData, {
         onConflict: 'subscriber_id,article_id',
+        ignoreDuplicates: false,
       })
 
     if (error) throw error
@@ -47,7 +78,7 @@ export async function GET(request: NextRequest) {
       event_type: 'feedback_submitted',
       subscriber_id: subscriber_id || null,
       article_id,
-      metadata: { rating },
+      metadata: { rating, summary_rating },
     })
 
     // Return HTML response for browser

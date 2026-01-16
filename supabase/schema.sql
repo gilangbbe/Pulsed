@@ -138,7 +138,8 @@ CREATE TABLE IF NOT EXISTS subscriber_feedback (
     subscriber_id UUID REFERENCES subscribers(id) ON DELETE CASCADE,
     article_id TEXT REFERENCES articles(id) ON DELETE CASCADE,
     digest_id UUID REFERENCES digests(id) ON DELETE SET NULL,
-    rating TEXT NOT NULL CHECK (rating IN ('useful', 'not_useful', 'already_knew')),
+    rating TEXT CHECK (rating IN ('useful', 'not_useful', 'already_knew')),
+    summary_rating TEXT CHECK (summary_rating IN ('good', 'poor')),
     comment TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(subscriber_id, article_id)
@@ -146,6 +147,7 @@ CREATE TABLE IF NOT EXISTS subscriber_feedback (
 
 CREATE INDEX IF NOT EXISTS idx_feedback_article ON subscriber_feedback(article_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_rating ON subscriber_feedback(rating);
+CREATE INDEX IF NOT EXISTS idx_feedback_summary_rating ON subscriber_feedback(summary_rating) WHERE summary_rating IS NOT NULL;
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)

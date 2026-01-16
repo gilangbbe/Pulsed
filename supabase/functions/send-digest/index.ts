@@ -269,18 +269,28 @@ function generateEmailHTML(
                   : ""
               }
               <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #F3F4F6;">
-                <p style="margin: 0 0 8px 0; font-size: 11px; color: #9CA3AF;">Was this article helpful?</p>
+                <p style="margin: 0 0 8px 0; font-size: 11px; color: #9CA3AF; font-weight: 600;">Was this article relevant?</p>
                 <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&rating=useful&subscriber_id=${subscriberId || ''}" 
-                   style="display: inline-block; margin-right: 8px; padding: 6px 12px; background-color: #10B981; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                   style="display: inline-block; margin-right: 8px; margin-bottom: 8px; padding: 6px 12px; background-color: #10B981; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
                   👍 Useful
                 </a>
                 <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&rating=not_useful&subscriber_id=${subscriberId || ''}" 
-                   style="display: inline-block; margin-right: 8px; padding: 6px 12px; background-color: #EF4444; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                   style="display: inline-block; margin-right: 8px; margin-bottom: 8px; padding: 6px 12px; background-color: #EF4444; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
                   👎 Not Useful
                 </a>
                 <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&rating=already_knew&subscriber_id=${subscriberId || ''}" 
-                   style="display: inline-block; padding: 6px 12px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                   style="display: inline-block; margin-bottom: 8px; padding: 6px 12px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
                   📚 Already Knew
+                </a>
+                
+                <p style="margin: 12px 0 8px 0; font-size: 11px; color: #9CA3AF; font-weight: 600;">How was the summary?</p>
+                <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&summary_rating=good&subscriber_id=${subscriberId || ''}" 
+                   style="display: inline-block; margin-right: 8px; padding: 6px 12px; background-color: #8B5CF6; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                  ✨ Good Summary
+                </a>
+                <a href="${SITE_URL}/api/feedback/article?article_id=${encodeURIComponent(article.article_id)}&summary_rating=poor&subscriber_id=${subscriberId || ''}" 
+                   style="display: inline-block; padding: 6px 12px; background-color: #6B7280; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                  ❌ Poor Summary
                 </a>
               </div>
             </td>
