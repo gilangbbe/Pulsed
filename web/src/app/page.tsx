@@ -111,6 +111,20 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 text-center">
           <p className="text-lg font-medium text-white mb-2">Pulsed</p>
           <p className="text-sm mb-4">AI-powered news curation for ML practitioners</p>
+          
+          {/* Content Attribution Disclaimer */}
+          <div className="bg-gray-700 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
+            <p className="text-xs text-gray-300 leading-relaxed">
+              <strong className="text-white">Content Notice:</strong> Pulsed provides AI-generated summaries of publicly available content. 
+              All original content belongs to their respective owners. 
+              We aggregate content from academic sources (ArXiv, Semantic Scholar) and official company blogs 
+              that permit educational and non-commercial use.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Pulsed is a free, non-commercial educational service.
+            </p>
+          </div>
+          
           <div className="flex justify-center space-x-6 text-sm">
             <Link href="/unsubscribe" className="hover:text-white transition-colors">
               Unsubscribe

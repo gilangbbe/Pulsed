@@ -12,7 +12,7 @@ from loguru import logger
 class RSSFeedSource:
     """Fetch articles from RSS feeds of ML blogs and news sites."""
     
-    # Default ML/AI focused RSS feeds
+    # Default ML/AI focused RSS feeds (TOS compliant only)
     DEFAULT_FEEDS = {
         "openai": "https://openai.com/blog/rss.xml",
         "google_ai": "https://blog.google/technology/ai/rss/",
@@ -23,9 +23,8 @@ class RSSFeedSource:
         "distill": "https://distill.pub/rss.xml",
         "pytorch": "https://pytorch.org/blog/feed.xml",
         "tensorflow": "https://blog.tensorflow.org/feeds/posts/default?alt=rss",
-        "towards_ds": "https://towardsdatascience.com/feed",
         "mit_news_ai": "https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml",
-        # "arxiv_sanity": "https://arxiv-sanity-lite.com/rss.xml",
+        # Removed: Towards Data Science (Medium TOS prohibits automated scraping)
     }
     
     def __init__(self, custom_feeds: Optional[Dict[str, str]] = None, verify_ssl: bool = False):

@@ -44,8 +44,9 @@ def sync_article_feedback(supabase: Client, days: int = None):
     """
     Sync article feedback from Supabase to local database.
     
-    The subscriber_feedback table has ratings: useful, not_useful, already_knew
-    We'll map these to the local feedback system.
+    The subscriber_feedback table has:
+    - rating: useful, not_useful, already_knew (for classifier)
+    - summary_rating: good, poor (for summarizer)
     """
     print("\nSyncing article feedback from cloud...")
     
@@ -69,56 +70,74 @@ def sync_article_feedback(supabase: Client, days: int = None):
     
     for item in cloud_feedback:
         article_id = item['article_id']
-        rating = item['rating']
+        rating = item.get('rating')
+        summary_rating = item.get('summary_rating')
         
-        # Map subscriber ratings to internal feedback
-        # "useful" -> good article, keep this classification
-        # "not_useful" -> should have been classified differently  
-        # "already_knew" -> not bad, but maybe less important
-        
-        # Get the current prediction for this article
-        prediction = db.get_prediction_by_article_id(article_id)
-        
-        if not prediction:
-            print(f"  Warning: No prediction found for article {article_id}, skipping")
-            continue
-        
-        original_label = prediction.get('predicted_label')
-        
-        # Determine corrected label based on feedback
-        if rating == 'useful':
-            # User found it useful - current label is correct
-            corrected_label = original_label
-        elif rating == 'not_useful':
-            # User didn't find it useful - might need different classification
-            # If it was marked "important" or "worth_learning", maybe it should be "garbage"
-            if original_label in ['important', 'worth_learning']:
-                corrected_label = 'garbage'
+        # Process classifier feedback (rating)
+        if rating:
+            # Get the current prediction for this article
+            prediction = db.get_prediction_by_article_id(article_id)
+            
+            if not prediction:
+                print(f"  Warning: No prediction found for article {article_id}, skipping classifier feedback")
             else:
-                corrected_label = original_label  # Already classified low
-        elif rating == 'already_knew':
-            # Not bad content, but maybe overestimated importance
-            if original_label == 'important':
-                corrected_label = 'worth_learning'
-            else:
-                corrected_label = original_label
-        else:
-            corrected_label = original_label
+                original_label = prediction.get('predicted_label')
+                
+                # Determine corrected label based on feedback
+                if rating == 'useful':
+                    # User found it useful - current label is correct
+                    corrected_label = original_label
+                elif rating == 'not_useful':
+                    # User didn't find it useful - might need different classification
+                    # If it was marked "important" or "worth_learning", maybe it should be "garbage"
+                    if original_label in ['important', 'worth_learning']:
+                        corrected_label = 'garbage'
+                    else:
+                        corrected_label = original_label  # Already classified low
+                elif rating == 'already_knew':
+                    # Not bad content, but maybe overestimated importance
+                    if original_label == 'important':
+                        corrected_label = 'worth_learning'
+                    else:
+                        corrected_label = original_label
+                else:
+                    corrected_label = original_label
+                
+                # Only add feedback if there's a meaningful correction
+                if corrected_label != original_label or rating == 'useful':
+                    try:
+                        db.add_feedback(
+                            feedback_type="classification",
+                            article_id=article_id,
+                            original_value=original_label,
+                            corrected_value=corrected_label,
+                            user_id=item.get('subscriber_id'),
+                            comment=f"Cloud feedback: {rating}" + (f" - {item.get('comment')}" if item.get('comment') else ""),
+                        )
+                        synced += 1
+                    except Exception as e:
+                        print(f"  Error syncing classifier feedback for {article_id}: {e}")
         
-        # Only add feedback if there's a meaningful correction
-        if corrected_label != original_label or rating == 'useful':
+        # Process summarizer feedback (summary_rating)
+        if summary_rating:
+            # Map summary ratings to numerical score
+            # good -> 1 (positive)
+            # poor -> -1 (negative)
+            summary_score = 1 if summary_rating == 'good' else -1
+            
             try:
                 db.add_feedback(
-                    feedback_type="classification",
+                    feedback_type="summary",
                     article_id=article_id,
-                    original_value=original_label,
-                    corrected_value=corrected_label,
+                    original_value=None,  # No original value for summary feedback
+                    corrected_value=summary_rating,  # 'good' or 'poor'
                     user_id=item.get('subscriber_id'),
-                    comment=f"Cloud feedback: {rating}" + (f" - {item.get('comment')}" if item.get('comment') else ""),
+                    comment=f"Summary quality: {summary_rating}",
+                    summary_rating=summary_score
                 )
                 synced += 1
             except Exception as e:
-                print(f"  Error syncing feedback for {article_id}: {e}")
+                print(f"  Error syncing summary feedback for {article_id}: {e}")
     
     print(f"  Synced {synced} feedback items to local database")
     return synced

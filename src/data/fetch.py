@@ -5,7 +5,9 @@ from datetime import datetime
 
 from loguru import logger
 
-from .sources import ArxivSource, RedditSource, PapersWithCodeSource, RSSFeedSource
+from .sources import ArxivSource, PapersWithCodeSource, RSSFeedSource, SemanticScholarSource
+# Reddit source removed - TOS prohibits transformative use
+# from .sources import RedditSource
 from .preprocess import Preprocessor
 from ..utils.db import get_db
 
@@ -16,22 +18,27 @@ class DataFetcher:
     
     This class coordinates fetching from multiple sources,
     deduplication, and storage to the database.
+    
+    Note: Only uses sources that explicitly allow educational/non-commercial
+    summarization and text mining per their TOS.
     """
     
     def __init__(self):
         self.arxiv = ArxivSource()
-        self.reddit = RedditSource()
+        # self.reddit = RedditSource()  # REMOVED - TOS violation
         self.pwc = PapersWithCodeSource()
         self.rss = RSSFeedSource()
+        self.semantic = SemanticScholarSource()
         self.preprocessor = Preprocessor()
         self.db = get_db()
     
     def fetch_all(
         self,
         include_arxiv: bool = True,
-        include_reddit: bool = True,
+        include_reddit: bool = False,  # DEPRECATED - Always False for TOS compliance
         include_pwc: bool = False,  # Disabled by default - API often returns HTML
         include_rss: bool = True,
+        include_semantic: bool = True,
         days_back: int = 1,
         data_version: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -40,16 +47,17 @@ class DataFetcher:
         
         Args:
             include_arxiv: Whether to fetch from ArXiv
-            include_reddit: Whether to fetch from Reddit
+            include_reddit: DEPRECATED - Always False (TOS compliance)
             include_pwc: Whether to fetch from Papers With Code
             include_rss: Whether to fetch from RSS feeds
+            include_semantic: Whether to fetch from Semantic Scholar
             days_back: Number of days to look back
             data_version: DVC commit hash for versioning
             
         Returns:
             Dictionary with fetch statistics
         """
-        logger.info("Starting data fetch from all sources")
+        logger.info("Starting data fetch from TOS-compliant sources only")
         all_articles = []
         stats = {
             "start_time": datetime.utcnow().isoformat(),
@@ -74,20 +82,10 @@ class DataFetcher:
                 logger.error(f"ArXiv fetch failed: {e}")
                 stats["sources"]["arxiv"] = {"error": str(e)}
         
-        # Fetch from Reddit
+        # Reddit source removed for TOS compliance
         if include_reddit:
-            try:
-                reddit_articles = self.reddit.fetch(time_filter="day")
-                # Validate that we got dictionaries
-                valid_reddit = [a for a in reddit_articles if isinstance(a, dict)]
-                if len(valid_reddit) != len(reddit_articles):
-                    logger.warning(f"Filtered out {len(reddit_articles) - len(valid_reddit)} invalid Reddit items")
-                all_articles.extend(valid_reddit)
-                stats["sources"]["reddit"] = len(valid_reddit)
-                logger.info(f"Fetched {len(valid_reddit)} articles from Reddit")
-            except Exception as e:
-                logger.error(f"Reddit fetch failed: {e}")
-                stats["sources"]["reddit"] = {"error": str(e)}
+            logger.warning("Reddit source is disabled due to TOS restrictions on transformative use")
+            stats["sources"]["reddit"] = {"error": "Disabled - TOS compliance"}
         
         # Fetch from Papers With Code
         if include_pwc:
@@ -118,6 +116,21 @@ class DataFetcher:
             except Exception as e:
                 logger.error(f"RSS fetch failed: {e}")
                 stats["sources"]["rss"] = {"error": str(e)}
+        
+        # Fetch from Semantic Scholar
+        if include_semantic:
+            try:
+                semantic_articles = self.semantic.fetch(days_back=days_back)
+                # Validate that we got dictionaries
+                valid_semantic = [a for a in semantic_articles if isinstance(a, dict)]
+                if len(valid_semantic) != len(semantic_articles):
+                    logger.warning(f"Filtered out {len(semantic_articles) - len(valid_semantic)} invalid Semantic Scholar items")
+                all_articles.extend(valid_semantic)
+                stats["sources"]["semantic_scholar"] = len(valid_semantic)
+                logger.info(f"Fetched {len(valid_semantic)} articles from Semantic Scholar")
+            except Exception as e:
+                logger.error(f"Semantic Scholar fetch failed: {e}")
+                stats["sources"]["semantic_scholar"] = {"error": str(e)}
         
         stats["total_fetched"] = len(all_articles)
         
@@ -212,9 +225,9 @@ class DataFetcher:
                 reddit_articles = self.reddit.fetch(time_filter="day")
                 valid_reddit = [a for a in reddit_articles if isinstance(a, dict)]
                 all_articles.extend(valid_reddit)
-                logger.info(f"Fetched {len(valid_reddit)} articles from Reddit")
+                logger.warning("Reddit source is disabled due to TOS restrictions")
             except Exception as e:
-                logger.error(f"Reddit fetch failed: {e}")
+                logger.error(f"Reddit fetch skipped: {e}")
         
         # Fetch from Papers With Code
         if include_pwc:
