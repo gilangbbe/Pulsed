@@ -15,7 +15,7 @@ import argparse
 import os
 import sqlite3
 import sys
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional
 from dotenv import load_dotenv
 
