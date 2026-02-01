@@ -1,7 +1,7 @@
 """Multi-model pipeline orchestrator."""
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 
 from loguru import logger
@@ -72,7 +72,7 @@ class ModelOrchestrator:
         """
         start_time = time.time()
         stats = {
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(timezone.utc).isoformat(),
             "articles_processed": 0,
             "classifications": {"garbage": 0, "important": 0, "worth_learning": 0},
             "summaries_generated": 0,
@@ -86,7 +86,7 @@ class ModelOrchestrator:
         
         if not articles:
             logger.info("No articles to process")
-            stats["end_time"] = datetime.utcnow().isoformat()
+            stats["end_time"] = datetime.now(timezone.utc).isoformat()
             return stats
         
         # Step 1: Classification
@@ -113,7 +113,7 @@ class ModelOrchestrator:
         stats["articles_processed"] = len(classified_articles)
         
         if classify_only:
-            stats["end_time"] = datetime.utcnow().isoformat()
+            stats["end_time"] = datetime.now(timezone.utc).isoformat()
             stats["total_time_seconds"] = time.time() - start_time
             return stats
         
@@ -171,7 +171,7 @@ class ModelOrchestrator:
                     logger.warning(f"Failed to store summary: {e}")
                     stats["errors"].append(str(e))
         
-        stats["end_time"] = datetime.utcnow().isoformat()
+        stats["end_time"] = datetime.now(timezone.utc).isoformat()
         stats["total_time_seconds"] = time.time() - start_time
         
         logger.info(

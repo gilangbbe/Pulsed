@@ -1,7 +1,7 @@
 """Data drift detection using statistical tests."""
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import numpy as np
 from scipy import stats
 from loguru import logger
@@ -216,7 +216,7 @@ class DriftDetector:
             Dictionary with all drift detection results
         """
         report = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "prediction_drift": self.detect_prediction_drift(),
         }
         

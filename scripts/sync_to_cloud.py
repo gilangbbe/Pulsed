@@ -102,7 +102,7 @@ def sync_articles(supabase: Client, conn: sqlite3.Connection, target_date: Optio
             "authors": authors,
             "published_date": article.get("published_date"),
             "fetched_date": article.get("fetched_date"),
-            "synced_at": datetime.utcnow().isoformat(),
+            "synced_at": datetime.now(timezone.utc).isoformat(),
         }
         
         try:
@@ -154,7 +154,7 @@ def sync_predictions(supabase: Client, conn: sqlite3.Connection, target_date: Op
             "confidence": pred.get("confidence"),
             "model_version": pred.get("classifier_version"),  # Local uses classifier_version
             "created_at": pred.get("prediction_time"),  # Local uses prediction_time
-            "synced_at": datetime.utcnow().isoformat(),
+            "synced_at": datetime.now(timezone.utc).isoformat(),
         }
         
         try:
@@ -219,7 +219,7 @@ def sync_summaries(supabase: Client, conn: sqlite3.Connection, target_date: Opti
             "key_takeaways": key_takeaways or [],
             "model_version": summary.get("summarizer_version"),  # Local uses summarizer_version
             "created_at": summary.get("generation_time"),  # Local uses generation_time
-            "synced_at": datetime.utcnow().isoformat(),
+            "synced_at": datetime.now(timezone.utc).isoformat(),
         }
         
         try:

@@ -1,6 +1,6 @@
 """Model promotion logic."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from loguru import logger
@@ -78,7 +78,7 @@ class ModelPromoter:
                 "version": version,
                 "new_stage": "Staging",
                 "reason": reason,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             
             logger.info(f"Successfully promoted to Staging")
@@ -128,7 +128,7 @@ class ModelPromoter:
                 "new_stage": "Production",
                 "previous_production": current_prod,
                 "reason": reason,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             
             # Log to database

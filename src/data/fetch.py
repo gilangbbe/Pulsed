@@ -1,7 +1,7 @@
 """Main data fetcher that aggregates all sources."""
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from loguru import logger
 
@@ -60,7 +60,7 @@ class DataFetcher:
         logger.info("Starting data fetch from TOS-compliant sources only")
         all_articles = []
         stats = {
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(timezone.utc).isoformat(),
             "sources": {},
             "total_fetched": 0,
             "total_new": 0,
@@ -164,7 +164,7 @@ class DataFetcher:
                 logger.warning(f"Failed to insert article {article['article_id']}: {e}")
         
         stats["total_new"] = new_count
-        stats["end_time"] = datetime.utcnow().isoformat()
+        stats["end_time"] = datetime.now(timezone.utc).isoformat()
         
         logger.info(f"Fetch complete: {new_count} new articles stored")
         return stats

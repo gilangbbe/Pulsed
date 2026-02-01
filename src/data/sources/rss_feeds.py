@@ -1,7 +1,7 @@
 """RSS feed data source for ML blogs and news."""
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
 
@@ -60,7 +60,7 @@ class RSSFeedSource:
             date_tuple = entry.get(date_field)
             if date_tuple:
                 try:
-                    return datetime(*date_tuple[:6])
+                    return datetime(*date_tuple[:6], tzinfo=timezone.utc)
                 except Exception:
                     continue
         
@@ -112,7 +112,7 @@ class RSSFeedSource:
             feeds_to_fetch = {k: v for k, v in self.feeds.items() if k in feed_names}
         
         articles = []
-        cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         
         for feed_name, feed_url in feeds_to_fetch.items():
             try:
@@ -144,7 +144,7 @@ class RSSFeedSource:
                     # If no date found, use current time (assume recent)
                     if not published_date:
                         logger.debug(f"No date found for article from {feed_name}, assuming recent: {title}")
-                        published_date = datetime.utcnow()
+                        published_date = datetime.now(timezone.utc)
                     
                     content = self._extract_content(entry)
                     abstract = content[:500] if content else None

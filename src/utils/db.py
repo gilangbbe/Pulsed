@@ -1,7 +1,7 @@
 """Database connection and query utilities."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 
@@ -205,7 +205,7 @@ class DatabaseManager:
                     "full_text": full_text,
                     "url": url,
                     "published_date": published_date,
-                    "fetched_date": datetime.utcnow(),
+                    "fetched_date": datetime.now(timezone.utc),
                     "metadata": json.dumps(metadata) if metadata else None,
                     "data_version": data_version,
                 }
@@ -292,7 +292,7 @@ class DatabaseManager:
                     "classifier_version": classifier_version,
                     "predicted_label": predicted_label,
                     "confidence": confidence,
-                    "prediction_time": datetime.utcnow(),
+                    "prediction_time": datetime.now(timezone.utc),
                     "latency_ms": latency_ms,
                 }
             )
@@ -349,7 +349,7 @@ class DatabaseManager:
                     "summary_text": summary_text,
                     "key_takeaways": json.dumps(key_takeaways) if key_takeaways else None,
                     "estimated_read_time": estimated_read_time,
-                    "generation_time": datetime.utcnow(),
+                    "generation_time": datetime.now(timezone.utc),
                     "latency_ms": latency_ms,
                     "rouge_1": rouge_scores.get("rouge1") if rouge_scores else None,
                     "rouge_2": rouge_scores.get("rouge2") if rouge_scores else None,
@@ -450,7 +450,7 @@ class DatabaseManager:
                     "predicted_label": predicted_label,
                     "correct_label": correct_label,
                     "classifier_version": classifier_version,
-                    "feedback_time": datetime.utcnow(),
+                    "feedback_time": datetime.now(timezone.utc),
                 }
             )
     
@@ -478,7 +478,7 @@ class DatabaseManager:
                     "summary_edited_text": edited_text,
                     "summary_issues": issues,
                     "summarizer_version": summarizer_version,
-                    "feedback_time": datetime.utcnow(),
+                    "feedback_time": datetime.now(timezone.utc),
                 }
             )
     

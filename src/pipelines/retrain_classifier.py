@@ -1,6 +1,6 @@
 """Classifier retraining pipeline."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 from loguru import logger
@@ -75,7 +75,7 @@ class ClassifierRetrainPipeline:
         logger.info("=" * 50)
         
         results = {
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(timezone.utc).isoformat(),
             "retrained": False,
             "promoted": False,
         }
@@ -164,7 +164,7 @@ class ClassifierRetrainPipeline:
             logger.error(f"Retraining failed: {e}")
             results["error"] = str(e)
         
-        results["end_time"] = datetime.utcnow().isoformat()
+        results["end_time"] = datetime.now(timezone.utc).isoformat()
         
         return results
     

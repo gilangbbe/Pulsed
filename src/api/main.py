@@ -1,7 +1,7 @@
 """Main FastAPI application."""
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
@@ -108,7 +108,7 @@ def create_app() -> FastAPI:
             classifier_status="loaded" if classifier else "not loaded",
             summarizer_status="loaded" if summarizer else "not loaded",
             database_status="connected" if db else "disconnected",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
     
     @app.get("/stats", response_model=StatsResponse, tags=["stats"])
@@ -309,7 +309,7 @@ def create_app() -> FastAPI:
                 probabilities={},
             ),
             summary=None,  # Would fetch from summaries table
-            created_at=article.get("fetched_at", datetime.utcnow()),
+            created_at=article.get("fetched_at", datetime.now(timezone.utc)),
         )
     
     return app

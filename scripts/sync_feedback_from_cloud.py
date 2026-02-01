@@ -13,7 +13,7 @@ Usage:
 import argparse
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv() 
@@ -54,7 +54,7 @@ def sync_article_feedback(supabase: Client, days: int = None):
     query = supabase.from_("subscriber_feedback").select("*")
     
     if days:
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
         query = query.gte("created_at", cutoff)
     
     result = query.execute()

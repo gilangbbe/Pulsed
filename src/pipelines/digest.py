@@ -1,7 +1,7 @@
 """Email digest generation."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
 from loguru import logger
@@ -125,7 +125,7 @@ class DigestGenerator:
         important = articles.get("important", [])
         
         result = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "worth_learning_count": len(worth_learning),
             "important_count": len(important),
             "stats": stats,
@@ -174,7 +174,7 @@ class DigestGenerator:
         stats = self.get_digest_stats(hours_back)
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "articles": articles,
             "stats": stats,
             "worth_learning_titles": [

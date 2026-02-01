@@ -1,7 +1,7 @@
 """ArXiv data source for fetching ML/AI papers."""
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 
 import arxiv
@@ -49,7 +49,7 @@ class ArxivSource:
             categories = self.CATEGORIES
         
         articles = []
-        cutoff_date = datetime.now() - timedelta(days=days_back)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         
         for category in categories:
             try:
@@ -64,7 +64,11 @@ class ArxivSource:
                 
                 for result in self.client.results(search):
                     # Check if paper is recent enough
-                    if result.published.replace(tzinfo=None) < cutoff_date:
+                    # Ensure published date is timezone-aware for comparison
+                    published = result.published
+                    if published.tzinfo is None:
+                        published = published.replace(tzinfo=timezone.utc)
+                    if published < cutoff_date:
                         continue
                     
                     article = {

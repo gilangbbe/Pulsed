@@ -1,7 +1,7 @@
 """Daily pipeline for data ingestion and processing."""
 
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from loguru import logger
@@ -79,7 +79,7 @@ class DailyPipeline:
         logger.info("Starting daily pipeline")
         logger.info("=" * 50)
         
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         results = {
             "start_time": start_time.isoformat(),
             "fetch": None,
@@ -112,7 +112,7 @@ class DailyPipeline:
             logger.error(f"Digest failed: {e}")
             results["errors"].append(f"Digest: {str(e)}")
         
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         results["end_time"] = end_time.isoformat()
         results["duration_seconds"] = (end_time - start_time).total_seconds()
         

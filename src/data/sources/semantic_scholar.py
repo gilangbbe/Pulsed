@@ -1,7 +1,7 @@
 """Semantic Scholar data source for ML/AI papers."""
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 
 import requests
@@ -89,7 +89,7 @@ class SemanticScholarSource:
                         
                     try:
                         paper_date = datetime.fromisoformat(pub_date.replace('Z', '+00:00'))
-                        cutoff_date = datetime.now() - timedelta(days=days_back)
+                        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
                         
                         if paper_date < cutoff_date:
                             continue
@@ -115,7 +115,7 @@ class SemanticScholarSource:
                         'source': 'semantic_scholar',
                         'authors': authors,
                         'published_date': pub_date,
-                        'fetched_date': datetime.now().isoformat(),
+                        'fetched_date': datetime.now(timezone.utc).isoformat(),
                         'metadata': {
                             'paper_id': paper['paperId'],
                             'citation_count': citations,

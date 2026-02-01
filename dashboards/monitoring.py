@@ -251,7 +251,7 @@ def main():
         st.markdown(f"""
             <div style='font-size: 0.75rem; color: #9ca3af;'>
                 Last Synced<br>
-                <span style='color: #4b5563; font-weight: 500;'>{datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</span>
+                <span style='color: #4b5563; font-weight: 500;'>{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}</span>
             </div>
         """, unsafe_allow_html=True)
     

@@ -1,7 +1,7 @@
 """Papers With Code data source."""
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 
 import requests
@@ -214,7 +214,8 @@ class PapersWithCodeSource:
             # Try different formats
             for fmt in ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"]:
                 try:
-                    return datetime.strptime(date_str, fmt)
+                    dt = datetime.strptime(date_str, fmt)
+                    return dt.replace(tzinfo=timezone.utc)
                 except ValueError:
                     continue
         except Exception:

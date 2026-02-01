@@ -1,7 +1,7 @@
 """Metrics collection and aggregation."""
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 import numpy as np
 from loguru import logger
 
@@ -137,7 +137,7 @@ class MetricsCollector:
         # This would need a new query method
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "database_status": "healthy",
             "model_status": {
                 "classifier": "unknown",  # Would check MLflow
@@ -160,7 +160,7 @@ class MetricsCollector:
         drift_detector = DriftDetector()
         
         return {
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "classification": self.collect_classification_metrics(days),
             "summarization": self.collect_summarization_metrics(days),
             "feedback": self.collect_feedback_metrics(),
